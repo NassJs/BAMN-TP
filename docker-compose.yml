@@ -19,6 +19,20 @@ services:
     volumes:
       - ./corpus:/app/corpus
 
+  api:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    container_name: assistkb-api
+    ports:
+      - "8000:8000"
+    environment:
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+    depends_on:
+      - qdrant
+
   embedding:
     build:
       context: .
