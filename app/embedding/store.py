@@ -4,8 +4,10 @@ from qdrant_client import models
 
 class QdrantStore:
     def __init__(self):
-        # On se connecte à l'instance Qdrant locale sur le port par défaut
-        self.client = QdrantClient(host="localhost", port=6333)
+        # Host configurable : "qdrant" dans docker-compose, "localhost" en local
+        host = os.getenv("QDRANT_HOST", "localhost")
+        port = int(os.getenv("QDRANT_PORT", "6333"))
+        self.client = QdrantClient(host=host, port=port)
         self.collection_name = "assistkb_collection"
         # ATTENTION : La dimension doit absolument être 384 pour le modèle all-MiniLM-L6-v2
         self.embedding_dim = 384 
