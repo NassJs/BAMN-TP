@@ -24,8 +24,7 @@ except ImportError:
     RecursiveCharacterTextSplitter = None
 
 # Raw corpus input folder
-INPUT_DIR = Path("corpus/raw")
-
+INPUT_DIR = Path("corpus/raw/data-gouv")
 # Final output required by R1
 OUTPUT_FILE = Path("corpus/chunks.jsonl")
 
