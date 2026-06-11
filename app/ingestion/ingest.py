@@ -1,5 +1,6 @@
 import json
 import re
+import os
 from pathlib import Path
 
 try:
@@ -12,7 +13,20 @@ try:
 except ImportError:
     PdfReader = None
 
+try:
+    from langdetect import detect
+except ImportError:
+    detect = None
+
+try:
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+except ImportError:
+    RecursiveCharacterTextSplitter = None
+
 INPUT_DIR = Path("corpus/raw")
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "800"))
+CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "120"))
+MIN_CHUNK_LEN = 80
 
 
 def clean_text(text: str) -> str:
@@ -23,6 +37,15 @@ def clean_text(text: str) -> str:
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n\s*\n+", "\n\n", text)
     return text.strip()
+
+
+def detect_language(text: str):
+    if detect is None or not text:
+        return None
+    try:
+        return detect(text[:1000])
+    except Exception:
+        return None
 
 
 def extract_txt(path: Path) -> str:
@@ -84,23 +107,37 @@ def extract_text(path: Path) -> str:
     return ""
 
 
-def collect_files(base_dir: Path):
-    if not base_dir.exists():
+def split_text(text: str):
+    text = clean_text(text)
+    if len(text) < MIN_CHUNK_LEN:
         return []
-    files = []
-    for pattern in ("*.txt", "*.json", "*.html", "*.htm", "*.pdf"):
-        files.extend(base_dir.rglob(pattern))
-    return sorted(files)
 
+    if RecursiveCharacterTextSplitter is not None:
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=CHUNK_SIZE,
+            chunk_overlap=CHUNK_OVERLAP,
+            separators=["\n\n", "\n", ". ", " ", ""],
+        )
+        chunks = splitter.split_text(text)
+        res = []
+        pos = 0
+        for chunk in chunks:
+            idx = text.find(chunk, pos)
+            if idx == -1:
+                idx = pos
+            chunk = clean_text(chunk)
+            if len(chunk) >= MIN_CHUNK_LEN:
+                res.append((idx, chunk))
+            pos = idx + len(chunk)
+        return res
 
-def main():
-    files = collect_files(INPUT_DIR)
-    for path in files[:3]:
-        text = clean_text(extract_text(path))
-        print(f"FILE={path} LEN={len(text)}")
-        print(text[:300])
-        print("-" * 40)
-
-
-if __name__ == "__main__":
-    main()
+    step = max(1, CHUNK_SIZE - CHUNK_OVERLAP)
+    res = []
+    for start in range(0, len(text), step):
+        end = min(start + CHUNK_SIZE, len(text))
+        chunk = clean_text(text[start:end])
+        if len(chunk) >= MIN_CHUNK_LEN:
+            res.append((start, chunk))
+        if end >= len(text):
+            break
+    return res
