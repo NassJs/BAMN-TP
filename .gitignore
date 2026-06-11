@@ -4,3 +4,4 @@ qdrant_data/
 .gemini/
 __pycache__/
 .venv/
+.vscode/
