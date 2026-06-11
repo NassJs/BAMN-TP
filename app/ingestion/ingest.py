@@ -1,6 +1,6 @@
 import json
-import re
 import os
+import re
 from pathlib import Path
 
 try:
@@ -23,14 +23,22 @@ try:
 except ImportError:
     RecursiveCharacterTextSplitter = None
 
+# Raw corpus input folder
 INPUT_DIR = Path("corpus/raw")
+
+# Final output required by R1
 OUTPUT_FILE = Path("corpus/chunks.jsonl")
+
+# Default chunk parameters required by the project
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "800"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "120"))
+
+# Skip extremely small fragments
 MIN_CHUNK_LEN = 80
 
 
 def clean_text(text: str) -> str:
+    """Normalize whitespace and remove noisy characters."""
     if not text:
         return ""
     text = text.replace("\x00", " ")
@@ -41,6 +49,7 @@ def clean_text(text: str) -> str:
 
 
 def detect_language(text: str):
+    """Detect language if langdetect is available."""
     if detect is None or not text:
         return None
     try:
@@ -50,10 +59,12 @@ def detect_language(text: str):
 
 
 def extract_txt(path: Path) -> str:
+    """Extract text from plain text files."""
     return path.read_text(encoding="utf-8", errors="ignore")
 
 
 def extract_json(path: Path) -> str:
+    """Extract text recursively from JSON values."""
     with path.open("r", encoding="utf-8", errors="ignore") as f:
         data = json.load(f)
 
@@ -76,9 +87,12 @@ def extract_json(path: Path) -> str:
 
 
 def extract_html(path: Path) -> str:
+    """Extract readable text from HTML files."""
     html = path.read_text(encoding="utf-8", errors="ignore")
+
     if BeautifulSoup is None:
         return re.sub(r"<[^>]+>", " ", html)
+
     soup = BeautifulSoup(html, "html.parser")
     for tag in soup(["script", "style", "noscript"]):
         tag.decompose()
@@ -86,8 +100,10 @@ def extract_html(path: Path) -> str:
 
 
 def extract_pdf(path: Path) -> str:
+    """Extract text from a PDF file."""
     if PdfReader is None:
-        raise ImportError("pypdf required")
+        raise ImportError("pypdf is required for PDF extraction")
+
     reader = PdfReader(str(path))
     pages = []
     for page in reader.pages:
@@ -96,7 +112,9 @@ def extract_pdf(path: Path) -> str:
 
 
 def extract_text(path: Path) -> str:
+    """Dispatch extraction according to file extension."""
     ext = path.suffix.lower()
+
     if ext == ".txt":
         return extract_txt(path)
     if ext == ".json":
@@ -105,10 +123,12 @@ def extract_text(path: Path) -> str:
         return extract_html(path)
     if ext == ".pdf":
         return extract_pdf(path)
+
     return ""
 
 
 def split_text(text: str):
+    """Split text into overlapping chunks."""
     text = clean_text(text)
     if len(text) < MIN_CHUNK_LEN:
         return []
@@ -120,41 +140,52 @@ def split_text(text: str):
             separators=["\n\n", "\n", ". ", " ", ""],
         )
         chunks = splitter.split_text(text)
-        res = []
-        pos = 0
-        for chunk in chunks:
-            idx = text.find(chunk, pos)
-            if idx == -1:
-                idx = pos
-            chunk = clean_text(chunk)
-            if len(chunk) >= MIN_CHUNK_LEN:
-                res.append((idx, chunk))
-            pos = idx + len(chunk)
-        return res
 
+        result = []
+        cursor = 0
+        for chunk in chunks:
+            chunk = clean_text(chunk)
+            idx = text.find(chunk, cursor)
+            if idx == -1:
+                idx = cursor
+            if len(chunk) >= MIN_CHUNK_LEN:
+                result.append((idx, chunk))
+            cursor = idx + max(1, len(chunk) - CHUNK_OVERLAP)
+
+        return result
+
+    # Fallback if langchain_text_splitters is not installed
     step = max(1, CHUNK_SIZE - CHUNK_OVERLAP)
-    res = []
+    result = []
+
     for start in range(0, len(text), step):
         end = min(start + CHUNK_SIZE, len(text))
         chunk = clean_text(text[start:end])
         if len(chunk) >= MIN_CHUNK_LEN:
-            res.append((start, chunk))
+            result.append((start, chunk))
         if end >= len(text):
             break
-    return res
+
+    return result
 
 
 def collect_files(base_dir: Path):
+    """Collect supported files from corpus/raw."""
     if not base_dir.exists():
         return []
+
     files = []
     for pattern in ("*.txt", "*.json", "*.html", "*.htm", "*.pdf"):
         files.extend(base_dir.rglob(pattern))
+
     return sorted(files)
 
 
 def process_file(path: Path):
-    text = clean_text(extract_text(path))
+    """Extract, chunk, and attach metadata to a single file."""
+    raw_text = extract_text(path)
+    text = clean_text(raw_text)
+
     if len(text) < MIN_CHUNK_LEN:
         return []
 
@@ -163,19 +194,22 @@ def process_file(path: Path):
     records = []
 
     for i, (position, chunk) in enumerate(split_text(text)):
-        records.append({
-            "source": str(path.as_posix()),
-            "type": file_type,
-            "chunk_id": f"{path.stem}_{i}",
-            "position": position,
-            "language": lang,
-            "text": chunk,
-        })
+        records.append(
+            {
+                "source": str(path.as_posix()),
+                "type": file_type,
+                "chunk_id": f"{path.stem}_{i}",
+                "position": position,
+                "language": lang,
+                "text": chunk,
+            }
+        )
 
     return records
 
 
 def main():
+    """Run ingestion and write the JSONL output."""
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 
     files = collect_files(INPUT_DIR)
