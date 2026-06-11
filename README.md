@@ -27,3 +27,30 @@ Avant de lancer le projet, assurez-vous de disposer des éléments suivants :
    git clone git@github.com:NassJs/BAMN-TP.git
    cd BAMN-TP
 ```
+
+### 2. Démarrer Qdrant
+Lancez la base de données vectorielle en tâche de fond avec Docker :
+```bash
+docker run -p 6333:6333 -v $(pwd)/qdrant_data:/qdrant/storage qdrant/qdrant
+```
+
+### 3. Environnement virtuel
+Il est fortement recommandé d'utiliser un environnement virtuel local (`.venv`) pour installer les dépendances :
+```bash
+pip install -r requirements.txt
+# (Inclut notamment qdrant-client, sentence-transformers, torch)
+```
+
+## 💻 Utilisation (Module R2 - Indexation)
+
+### Indexation des données
+Pour lire le fichier `corpus/chunks.jsonl`, générer les embeddings et les envoyer dans Qdrant :
+```bash
+python -m app.embedding.embed
+```
+
+### Tester la recherche
+Une fois les données indexées, vous pouvez interroger la base en langage naturel :
+```bash
+python -m app.embedding.search
+```
