@@ -33,8 +33,9 @@ class QdrantStore:
         
     def search(self, query_vector, top_k=5):
         """Cherche les vecteurs les plus proches"""
-        return self.client.search(
+        res = self.client.query_points(
             collection_name=self.collection_name,
-            query_vector=query_vector,
+            query=query_vector,
             limit=top_k
         )
+        return res.points
