@@ -24,6 +24,7 @@ except ImportError:
     RecursiveCharacterTextSplitter = None
 
 INPUT_DIR = Path("corpus/raw")
+OUTPUT_FILE = Path("corpus/chunks.jsonl")
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "800"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "120"))
 MIN_CHUNK_LEN = 80
@@ -141,3 +142,57 @@ def split_text(text: str):
         if end >= len(text):
             break
     return res
+
+
+def collect_files(base_dir: Path):
+    if not base_dir.exists():
+        return []
+    files = []
+    for pattern in ("*.txt", "*.json", "*.html", "*.htm", "*.pdf"):
+        files.extend(base_dir.rglob(pattern))
+    return sorted(files)
+
+
+def process_file(path: Path):
+    text = clean_text(extract_text(path))
+    if len(text) < MIN_CHUNK_LEN:
+        return []
+
+    lang = detect_language(text)
+    file_type = path.suffix.lower().lstrip(".")
+    records = []
+
+    for i, (position, chunk) in enumerate(split_text(text)):
+        records.append({
+            "source": str(path.as_posix()),
+            "type": file_type,
+            "chunk_id": f"{path.stem}_{i}",
+            "position": position,
+            "language": lang,
+            "text": chunk,
+        })
+
+    return records
+
+
+def main():
+    OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    files = collect_files(INPUT_DIR)
+    all_chunks = []
+
+    for path in files:
+        try:
+            all_chunks.extend(process_file(path))
+        except Exception as e:
+            print(f"[ingest] skip {path}: {e}")
+
+    with OUTPUT_FILE.open("w", encoding="utf-8") as f:
+        for item in all_chunks:
+            f.write(json.dumps(item, ensure_ascii=False) + "\n")
+
+    print(f"[ingest] {len(files)} documents -> {len(all_chunks)} chunks dans {OUTPUT_FILE}")
+
+
+if __name__ == "__main__":
+    main()
