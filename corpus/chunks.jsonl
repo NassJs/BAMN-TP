@@ -1,0 +1,3 @@
+{"id": "chunk_1", "text": "Les données personnelles doivent être protégées selon le RGPD.", "metadata": {"source": "guide_cnil.pdf", "page": 1}}
+{"id": "chunk_2", "text": "La recherche vectorielle permet de trouver des textes sémantiquement proches.", "metadata": {"source": "doc_tech.txt", "page": 5}}
+{"id": "chunk_3", "text": "Le modèle all-MiniLM-L6-v2 génère des embeddings de 384 dimensions.", "metadata": {"source": "readme.md", "page": 1}}
