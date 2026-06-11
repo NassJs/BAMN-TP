@@ -1,4 +1,4 @@
-# BAMN-TP : Pipeline d'Ingestion, Indexation (Qdrant) et Recherche LLM
+# BAMN-TP : Pipeline d'Ingestion, Indexation et Recherche LLM
 
 Ce projet met en place une architecture complète permettant l'extraction de données, leur vectorisation, leur stockage dans une base de données vectorielle, et enfin l'interrogation de ces données via un modèle de langage (LLM).
 
