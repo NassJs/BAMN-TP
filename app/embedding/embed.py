@@ -7,7 +7,8 @@ import uuid
 from sentence_transformers import SentenceTransformer
 from qdrant_client.models import PointStruct
 
-from app.embedding.store import QdrantStore
+# On importe l'adaptateur store.py que tu as dû créer juste avant
+from app.store import QdrantStore
 
 MODEL_NAME = "all-MiniLM-L6-v2"
 DATA_PATH = "corpus/chunks.jsonl"
