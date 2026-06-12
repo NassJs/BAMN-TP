@@ -3,7 +3,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sentence_transformers import SentenceTransformer
-from app.store import QdrantStore
+from app.embedding.store import QdrantStore
 
 MODEL_NAME = "all-MiniLM-L6-v2"
 

@@ -1,5 +1,5 @@
 from sentence_transformers import SentenceTransformer
-from app.store import QdrantStore
+from app.embedding.store import QdrantStore
 
 MODEL_NAME = "all-MiniLM-L6-v2"
 SIMILARITY_THRESHOLD = 0.7
