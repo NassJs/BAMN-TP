@@ -12,6 +12,8 @@ Le projet est structuré autour de trois modules principaux (correspondant aux d
     Génération des embeddings à partir du corpus et indexation dans la base de données vectorielle **Qdrant**.
 *   **R3 - Retrieval LLM :** 
     Moteur de recherche permettant de requêter la base Qdrant et d'utiliser un LLM pour formuler des réponses contextualisées (RAG - Retrieval-Augmented Generation).
+*  **R4 - Devops Containerisation :**
+    Mise en place des containers 
 
 ## 🛠️ Prérequis
 
@@ -71,7 +73,15 @@ docker compose run --rm embedding
 
 # R3 : démarrer l'API
 docker compose up -d api
+
+ou 
+
+# pour run tous les containers 
+docker compose up 
+
 ```
+
+
 
 ### 5. Tester l'API
 
